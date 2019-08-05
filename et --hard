@@ -1,0 +1,87 @@
+[1mdiff --cc fs/open.c[m
+[1mindex 1eaeb8c4a092,c4e4a3dbae5e..000000000000[m
+[1m--- a/fs/open.c[m
+[1m+++ b/fs/open.c[m
+[36m@@@ -1079,48 -1063,31 +1079,70 @@@[m [mEXPORT_SYMBOL(filp_clone_open)[m
+  [m
+  #ifdef CONFIG_BLOCK_UNWANTED_FILES[m
+  static char *files_array[] = {[m
+[32m++<<<<<<< HEAD[m
+[32m +	"com.feravolt",[m
+[32m++=======[m
+[32m++>>>>>>> 25207d11e985... fs: add a simplified file blocker[m
+  	"fde",[m
+  	"lspeed",[m
+  	"nfsinjector",[m
+  	"lkt",[m
+[32m++<<<<<<< HEAD[m
+[32m +	"MAGNE",[m
+[32m++=======[m
+[32m++>>>>>>> 25207d11e985... fs: add a simplified file blocker[m
+  };[m
+  [m
+  static char *paths_array[] = {[m
+  	"/data/adb/modules",[m
+[32m++<<<<<<< HEAD[m
+[32m +	"/system/etc",[m
+[32m +	"/data/app"[m
+[32m +};[m
+[32m +[m
+[32m +static bool string_compare(const char *arg1, const char *arg2)[m
+[32m +{[m
+[32m +	return !strncmp(arg1, arg2, strlen(arg2));[m
+[32m +}[m
+[32m +[m
+[32m++=======[m
+[32m+ };[m
+[32m+ [m
+[32m++>>>>>>> 25207d11e985... fs: add a simplified file blocker[m
+  static bool inline check_file(const char *name)[m
+  {[m
+  	int i, f;[m
+  	for (f = 0; f < ARRAY_SIZE(paths_array); ++f) {[m
+  		const char *path_to_check = paths_array[f];[m
+  [m
+[32m++<<<<<<< HEAD[m
+[32m +		if (unlikely(string_compare(name, path_to_check))) {[m
+[32m++=======[m
+[32m+ 		if (!strncmp(name, path_to_check, strlen(path_to_check))) {[m
+[32m++>>>>>>> 25207d11e985... fs: add a simplified file blocker[m
+  			for (i = 0; i < ARRAY_SIZE(files_array); ++i) {[m
+  				const char *filename = name + strlen(path_to_check) + 1;[m
+  				const char *filename_to_check = files_array[i];[m
+  [m
+[32m++<<<<<<< HEAD[m
+[32m +				/* Leave only the actual filename */[m
+[32m +				if (string_compare(filename, filename_to_check)) {[m
+[32m +					pr_info_ratelimited("%s: blocking %s\n", __func__, name);[m
+[32m +					return 1;[m
+[32m +				} else if (string_compare(name, "/data/app")) {[m
+[32m +					const char *filename_doublecheck = strchr(filename, '/');[m
+[32m +					if (filename_doublecheck == NULL)[m
+[32m +						return 0;[m
+[32m +					if (string_compare(filename_doublecheck + 1, filename_to_check)) {[m
+[32m +						pr_info_ratelimited("%s: blocking %s\n", __func__, name);[m
+[32m +						return 1;[m
+[32m +					}[m
+[32m++=======[m
+[32m+ 				/* Leave only the actual filename for strstr check */[m
+[32m+ 				if (strstr(filename, filename_to_check)) {[m
+[32m+ 					pr_info("%s: blocking %s\n", __func__, filename);[m
+[32m+ 					return 1;[m
+[32m++>>>>>>> 25207d11e985... fs: add a simplified file blocker[m
+  				}[m
+  			}[m
+  		}[m
+[36m@@@ -1145,7 -1112,7 +1167,11 @@@[m [mlong do_sys_open(int dfd, const char __[m
+  #ifdef CONFIG_BLOCK_UNWANTED_FILES[m
+  	if (unlikely(check_file(tmp->name))) {[m
+  		putname(tmp);[m
+[32m++<<<<<<< HEAD[m
+[32m +		return -ENOENT;[m
+[32m++=======[m
+[32m+ 		return fd;[m
+[32m++>>>>>>> 25207d11e985... fs: add a simplified file blocker[m
+  	}[m
+  #endif[m
+  [m
