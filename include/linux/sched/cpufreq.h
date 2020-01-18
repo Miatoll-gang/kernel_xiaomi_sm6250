@@ -19,6 +19,10 @@
 
 #define SCHED_CPUFREQ_RT_DL	(SCHED_CPUFREQ_RT | SCHED_CPUFREQ_DL)
 
+#ifdef CONFIG_AIGOV
+#define SCHED_CPUFREQ_AIGOV (1U << 9)
+#endif
+
 #ifdef CONFIG_CPU_FREQ
 struct cpufreq_policy;
 
