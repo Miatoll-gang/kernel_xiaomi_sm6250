@@ -67,7 +67,7 @@
 #include <linux/kexec.h>
 #include <linux/bpf.h>
 #include <linux/mount.h>
-
+#include <linux/battery_saver.h>
 #include <linux/uaccess.h>
 #include <asm/processor.h>
 
@@ -3463,42 +3463,40 @@ int proc_do_large_bitmap(struct ctl_table *table, int write,
 	}
 }
 
-static int do_proc_douintvec_capacity_conv(bool *negp, unsigned long *lvalp,
-					   int *valp, int write, void *data)
+#ifndef CONFIG_SCHED_WALT
+int sched_boost_handler(struct ctl_table *table, int write,
+		void __user *buffer, size_t *lenp,
+		loff_t *ppos)
 {
-	if (write) {
-		/*
-		 * The sched_upmigrate/sched_downmigrate tunables are
-		 * accepted in percentage. Limit them to 100.
-		 */
-		if (*negp || *lvalp == 0 || *lvalp > 100)
-			return -EINVAL;
-		*valp = SCHED_FIXEDPOINT_SCALE * 100 / *lvalp;
+	int ret;
+	unsigned int *data = (unsigned int *)table->data;
+
+	ret = proc_dointvec_minmax(table, write, buffer, lenp, ppos);
+
+	if (ret || !write)
+		return ret;
+
+	pr_debug("%s set sb to %i\n", current->comm, *data);
+
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	if (is_battery_saver_on())
+		return ret;
+
+	if (*data == 1) {
+		do_stune_boost("top-app", 20, &boost_slot_ta);
+		do_stune_boost("foreground", 5, &boost_slot_fg);
+	} else if (*data == 3) {
+		do_stune_boost("top-app", 10, &boost_slot_ta);
+		do_stune_boost("foreground", 1, &boost_slot_fg);
 	} else {
-		*negp = false;
-		*lvalp = SCHED_FIXEDPOINT_SCALE * 100 / *valp;
+		reset_stune_boost("top-app", boost_slot_ta);
+		reset_stune_boost("foreground", boost_slot_fg);
 	}
+#endif
 
-	return 0;
+	return ret;
 }
-
-/**
- * proc_douintvec_capacity - read a vector of integers in percentage and convert
- *			    into sched capacity
- * @table: the sysctl table
- * @write: %TRUE if this is a write to the sysctl file
- * @buffer: the user buffer
- * @lenp: the size of the user buffer
- * @ppos: file position
- *
- * Returns 0 on success.
- */
-int proc_douintvec_capacity(struct ctl_table *table, int write,
-			    void __user *buffer, size_t *lenp, loff_t *ppos)
-{
-	return do_proc_dointvec(table, write, buffer, lenp, ppos,
-				do_proc_douintvec_capacity_conv, NULL);
-}
+#endif
 
 static int do_proc_douintvec_rwin(bool *negp, unsigned long *lvalp,
 				  int *valp, int write, void *data)
